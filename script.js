@@ -95,8 +95,9 @@ class Tank {
         this.player = player;
         this.xy = xy;
         this.cxy = {x: this.xy.x+50, y: this.xy.y+38};
-        this.r = 0;
-        this.a = 0;
+        this.rad = 0;
+        this.ang = 0;
+        this.numb = 0; // Used in the proyectiles color
     }
 
     /**
@@ -109,8 +110,8 @@ class Tank {
         this.canvas.drawCircle(this.cxy, 25, {o: 0, f: Math.PI*2}, "#a76745");
         this.canvas.drawLine(this.cxy,
                              {
-                                x: this.cxy.x+100*Math.cos(this.r),
-                                y: this.cxy.y+100*Math.sin(this.r)
+                                x: this.cxy.x+100*Math.cos(this.rad),
+                                y: this.cxy.y+100*Math.sin(this.rad)
                             },
                             8, "#a76745");
     }
@@ -122,9 +123,15 @@ class Tank {
         proyectiles.push(new Proyectile(this.canvas,
                                         this,
                                         Object.create({
-                                            x: this.cxy.x+100*Math.cos(this.r),
-                                            y: this.cxy.y+100*Math.sin(this.r)}),
-                                        {x: Math.cos(this.r), y: Math.sin(this.r)}));
+                                            x: this.cxy.x+100*Math.cos(this.rad),
+                                            y: this.cxy.y+100*Math.sin(this.rad)}),
+                                        {x: Math.cos(this.rad), y: Math.sin(this.rad)},
+                                        `hsl(${this.numb}, 100%, 50%)`));
+        if (this.numb > 360) {
+            this.numb = 0;
+        } else {
+            this.numb += 5;
+        }
     }
 }
 
@@ -134,19 +141,21 @@ class Proyectile {
      * @param {Tank} tank The tank of the proyectile
      * @param {{x: Number, y: Number}} xy The position of the proyectile
      * @param {{x: Number, y: Number}} vxy The velocity of the proyectile
+     * @param {String} colour The colour of the proyectile
      */
-    constructor(canvas, tank, xy, vxy) {
+    constructor(canvas, tank, xy, vxy, colour) {
         this.canvas = canvas;
         this.tank = tank;
         this.xy = xy;
         this.vxy = vxy;
+        this.colour = colour;
     }
 
     /**
      * Draws the proyectile on the canvas
      */
     draw() {
-        this.canvas.drawCircle(this.xy, 5, {o: 0, f: Math.PI*2}, `hsl(${Math.asin(this.vxy.x)*180/Math.PI}, 100%, 50%)`);
+        this.canvas.drawCircle(this.xy, 5, {o: 0, f: Math.PI*2}, this.colour);
     }
 
     /**
@@ -155,6 +164,9 @@ class Proyectile {
     move() {
         this.xy.x += this.vxy.x;
         this.xy.y += this.vxy.y;
+
+        this.vxy.x *= 1.01;
+        this.vxy.y *= 1.01;
     }
 
     /**
@@ -201,12 +213,14 @@ function keydown(e) {
         map.push(key);
 
     if (map.includes("ArrowLeft")) {
-        tank.a -= 2;
+        tank.ang -= 2;
+        // Recalculate the angle of the tank in radians
+        tank.rad = tank.ang*Math.PI/180;
     } else if (map.includes("ArrowRight")) {
-        tank.a += 2;
+        tank.ang += 2;
+        // Recalculate the angle of the tank in radians
+        tank.rad = tank.ang*Math.PI/180;
     }
-    // Recalculate the angle of the tank in radians
-    tank.r = tank.a*Math.PI/180;
     
     if (map.includes("Space")) {
         tank.shoot();
@@ -215,6 +229,19 @@ function keydown(e) {
 
 function keyup(e) {
     map = [];
+}
+
+function mousemove(e) {
+    let y = e.clientY - canvas.canvas.offsetTop - canvas.canvas.height/2 + 35;
+    let x = e.clientX - canvas.canvas.offsetLeft - 150;
+    tank.rad = Math.atan2(y, x);
+}
+
+function mousedown(e) {
+    let button = e.buttons;
+    if (button === 1) {
+        tank.shoot();
+    }
 }
 
 
@@ -262,3 +289,5 @@ setInterval(() => spawnEnemy({x: 300, y: 0, w: canvas.canvas.width-20, h: canvas
 
 addEventListener("keydown", keydown);
 addEventListener("keyup", keyup);
+addEventListener("mousemove", mousemove);
+addEventListener("mousedown", mousedown);
